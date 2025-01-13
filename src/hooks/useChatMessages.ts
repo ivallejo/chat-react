@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Message, ChatResponse } from '../types';
 
+const END_POINT = import.meta.env.VITE_BACKEND_URL;
+
+
 export const useChatMessages = () => {
   const [messages, setMessages] = useState<Message[]>([
     { id: 1, text: "¡Hola! ¿En qué puedo ayudarte hoy? 👋", time: "15:45", isUser: false },
@@ -23,7 +26,7 @@ export const useChatMessages = () => {
     try {
       setIsTyping(true);
       await new Promise(resolve => setTimeout(resolve, 1000));
-      const response = await fetch(`http://localhost:3001/consultar?consulta=${encodeURIComponent(userMessage)}`);
+      const response = await fetch(`${END_POINT}/consultar?consulta=${encodeURIComponent(userMessage)}`);
       const data: ChatResponse = await response.json();
       addMessage(data.respuesta, false);
     } catch (error) {
