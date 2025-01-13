@@ -25,7 +25,6 @@ export const useChatMessages = () => {
   const fetchBotResponse = async (userMessage: string) => {
     try {
       setIsTyping(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
       const response = await fetch(`${END_POINT}/consultar?consulta=${encodeURIComponent(userMessage)}`);
       const data: ChatResponse = await response.json();
       addMessage(data.respuesta, false);
