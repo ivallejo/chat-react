@@ -6,5 +6,5 @@ export interface Message {
 }
 
 export interface ChatResponse {
-  respuesta: string;
+  respuesta: string[];
 }
