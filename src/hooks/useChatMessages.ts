@@ -1,21 +1,74 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Message, ChatResponse } from '../types';
-import { v4 as uuidv4 } from 'uuid';
 
 const END_POINT = import.meta.env.VITE_BACKEND_URL;
 
+interface ThreadResponse {
+  threadId: string;
+}
+
 export const useChatMessages = () => {
 
-  const [sessionId] = useState(uuidv4());
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [threadId, setThreadId] = useState<string | null>(() => {
+    return localStorage.getItem('threadId');
+  });
 
-  
-  const now = new Date();
-  const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-    
-  const [messages, setMessages] = useState<Message[]>([
-    { id: 1, text: "¡Hola! Soy el asistente virtual encargado de brindarte información, apoyo y orientación sobre el consumo de drogas, prevención, y cómo buscar ayuda 🧠💬", time, isUser: false },
-    { id: 2, text: " ¿Cuál es tu nombre para poder comenzar? ", time, isUser: false },
-  ]);
+  // Efecto para cargar mensajes anteriores cuando hay un threadId
+  useEffect(() => {
+    const fetchPreviousMessages = async () => {
+      if (!threadId) return;
+      
+      try {
+        const response = await fetch(`${END_POINT}/message/${threadId}`);
+        const data: ChatResponse = await response.json();
+        
+        // Limpiar mensajes existentes antes de agregar los recuperados
+        setMessages([]);
+        // Agregar cada mensaje recuperado
+        data.messages.reverse().forEach(message => {
+          const now = new Date();
+          const time = now.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            hour12: false 
+          });
+          
+          if (message.text) {
+            setMessages(prev => [...prev, {
+              id: prev.length + 1,
+              text: message.text.value,
+              time,
+              isUser: message.role === 'user'
+            }]);
+          }
+        });
+      } catch (error) {
+        console.error('Error al recuperar mensajes anteriores:', error);
+      }
+    };
+
+    fetchPreviousMessages();
+  }, []);
+
+  // Efecto existente para obtener threadId
+  useEffect(() => {
+    const fetchThreadId = async () => {
+      if (threadId) return;
+      
+      try {
+        const response = await fetch(`${END_POINT}/thread`);
+        const data: ThreadResponse = await response.json();
+        setThreadId(data.threadId);
+        localStorage.setItem('threadId', data.threadId);
+      } catch (error) {
+        console.error('Error al obtener threadId:', error);
+      }
+    };
+
+    fetchThreadId();
+  }, [threadId]);
+
   const [isTyping, setIsTyping] = useState(false);
 
   const addMessage = (text: string, isUser: boolean) => {
@@ -33,18 +86,24 @@ export const useChatMessages = () => {
   const fetchBotResponse = async (userMessage: string) => {
     try {
       setIsTyping(true);
-      const response = await fetch(`${END_POINT}/consultar?consulta=${encodeURIComponent(userMessage)}`, {
-        method: 'GET',
+      const response = await fetch(`${END_POINT}/message`, {
+        method: 'POST',
         headers: {
-          'x-session-id': sessionId
-        }
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          threadId: threadId // Usar el threadId dinámico en lugar del hardcodeado
+        })
       });
       const data: ChatResponse = await response.json();
-      for (const element of data.respuesta) {
 
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        addMessage(element, false);
-      }
+      const element = data.messages[0]
+      addMessage(element.text.value, false);
+      
+      // for (const element of data.messages) {
+        // addMessage(element.text.value, false);
+      // }
       
     } catch (error) {
       console.error('Error fetching bot response:', error);
@@ -58,6 +117,7 @@ export const useChatMessages = () => {
     messages,
     isTyping,
     addMessage,
-    fetchBotResponse
+    fetchBotResponse,
+    threadId
   };
 };

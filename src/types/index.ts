@@ -6,5 +6,16 @@ export interface Message {
 }
 
 export interface ChatResponse {
-  respuesta: string[];
+  messages: MessageResponse[];
+}
+
+export interface MessageResponse {
+  type: string;
+  text: Value;
+  role: string;
+}
+
+export interface Value {
+  value: string;
+  annotations: string[];
 }
